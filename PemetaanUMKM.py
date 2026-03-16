@@ -21,6 +21,7 @@ with st.sidebar:
     st.markdown("### ⚙️ Konfigurasi AI")
     api_key = st.text_input("Masukkan Google Gemini API Key", type="password")
     st.markdown("[Ambil API Key Gratis di sini](https://aistudio.google.com/app/apikey)")
+    st.info("PENTING: Gunakan API Key dari akun Google yang belum terkena limit hari ini.")
 
 # --- 2. LOAD DATASET ---
 @st.cache_data
@@ -55,7 +56,7 @@ if 'ai_response' not in st.session_state:
 st.markdown('<div class="header-box"> WebGIS K-Means & AI Malawele</div>', unsafe_allow_html=True)
 
 with st.form(key='search_form'):
-    query_input = st.text_input("🔍 Tanya AI & Cari Lokasi UMKM Sekaligus:", placeholder="Contoh: umkm apa saja yg ada di jl. gambas")
+    query_input = st.text_input("🔍 Tanya AI & Cari Lokasi UMKM Sekaligus:", placeholder="Contoh: umkm apa aja si yg ada di jl. sawi")
     submit_button = st.form_submit_button(label='Cari Lokasi & Tanya AI')
 
 if submit_button and query_input:
@@ -69,8 +70,8 @@ filtered_df = df.copy()
 if query:
     user_input = query.lower().replace(',', ' ').replace('?', '').replace('.', ' ').split()
     
-    # Kata-kata sampah yang akan diabaikan oleh peta (termasuk 'umkm')
-    ignore = ['dimana', 'lokasi', 'cari', 'cariin', 'carikan', 'ada', 'di', 'mana', 'tahu', 'apa', 'tunjukkan', 'ke', 'tolong', 'dong', 'info', 'tempat', 'buatkan', 'puisi', 'siapa', 'jalan', 'jl', 'jln', 'yg', 'yang', 'dari', 'saja', 'sebutkan', 'umkm', 'daftar', 'semua', 'toko', 'warung']
+    # Kata-kata sampah yang akan diabaikan oleh peta
+    ignore = ['dimana', 'lokasi', 'cari', 'cariin', 'carikan', 'ada', 'di', 'mana', 'tahu', 'apa', 'tunjukkan', 'ke', 'tolong', 'dong', 'info', 'tempat', 'buatkan', 'puisi', 'siapa', 'jalan', 'jl', 'jln', 'yg', 'yang', 'dari', 'saja', 'sebutkan', 'umkm', 'daftar', 'semua', 'toko', 'warung', 'aja', 'si']
     keywords = [t for t in user_input if t not in ignore and len(t) > 2]
 
     if keywords:
@@ -91,7 +92,7 @@ if query:
 col_map, col_ai = st.columns([2, 1.2])
 
 with col_map:
-    start_loc = [-0.9648, 131.3059]
+    start_loc = [-0.9648, 131.3059] # Default Sorong, rubah jika perlu
     if not filtered_df.empty: 
         start_loc = [filtered_df.iloc[0]['lat'], filtered_df.iloc[0]['lon']]
         
@@ -118,11 +119,11 @@ with col_ai:
     if query:
         if not st.session_state.ai_response:
             if not api_key: 
-                st.warning("⚠️ Masukkan API Key di sidebar kiri terlebih dahulu.")
+                st.warning("⚠️ Masukkan API Key dari akun Google yang baru di sidebar kiri.")
             else:
                 with st.spinner("AI berpikir..."):
                     try:
-                        time.sleep(1) # Jeda aman anti limit 429
+                        time.sleep(1) # Jeda aman
                         genai.configure(api_key=api_key)
                         
                         # AI Pintar: Beda konteks Spesifik vs Umum
@@ -142,9 +143,8 @@ with col_ai:
                             2. JIKA user mencari nama spesifik yang memang tidak ada, katakan "Mohon maaf, tidak ditemukan".
                             3. Tolak pertanyaan di luar konteks UMKM."""
 
-                        # Auto-Discovery Model (Anti Error 404)
-                        tersedia = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                        model_pilihan = next((m for m in tersedia if 'flash' in m.lower()), tersedia[0] if tersedia else 'gemini-1.5-flash')
+                        # PAKSA PAKAI MODEL FLASH (ANTI LIMIT 20/HARI)
+                        model_pilihan = 'gemini-1.5-flash'
                         
                         model = genai.GenerativeModel(model_pilihan, system_instruction=sys_prompt)
                         response = model.generate_content(query)
