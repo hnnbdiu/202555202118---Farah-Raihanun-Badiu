@@ -1,6 +1,7 @@
-streamlit
+treamlit
 pandas
 folium
 streamlit-folium
 scikit-learn
-google-generativeai
+thefuzz
+python-Levenshtein
